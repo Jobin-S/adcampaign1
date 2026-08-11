@@ -299,7 +299,7 @@ export default function App() {
 
   const handleLeadSubmit = (e) => {
     e.preventDefault();
-    if (!userData.name || !userData.whatsapp) return;
+    if (!userData.name || userData.whatsapp.length !== 10) return;
 
     // Payload
     const payload = {
@@ -631,10 +631,13 @@ export default function App() {
                             <input
                               type="tel"
                               required
+                              inputMode="numeric"
+                              pattern="[0-9]{10}"
+                              maxLength={10}
                               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-green-500 focus:ring-4 focus:ring-green-100"
                               placeholder="WhatsApp number"
                               value={userData.whatsapp}
-                              onChange={e => setUserData({ ...userData, whatsapp: e.target.value })}
+                              onChange={e => setUserData({ ...userData, whatsapp: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                             />
                           </div>
                           <button
