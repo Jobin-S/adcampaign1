@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Check, Code, Layout, Database, Layers, Clock, Zap, Send, Instagram, Youtube, Linkedin, Map, Brain, Sparkles, Cpu, AppWindow, Smartphone, Globe, Gamepad2, Shield } from 'lucide-react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Check, Clock, Database, FileText, Layout, MessageCircle, Sparkles, AppWindow, Smartphone, Gamepad2, Shield, Zap, Brain } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const questions = [
@@ -116,14 +116,77 @@ const heroCopy = {
   }
 };
 
+const resultProfiles = {
+  'Web Development': {
+    label: 'Web Developer',
+    image: '/web_dev_kerala.png',
+    accent: 'from-blue-600 to-sky-500',
+    badge: 'Creative builder',
+    summary: 'You seem drawn to visual work, interactive ideas, and creating things people can use on the web.',
+    why: 'Your answers point toward design sense, curiosity about apps, and comfort with building public-facing products.',
+    chips: ['Websites', 'UI design', 'Frontend logic'],
+    roadmap: ['HTML, CSS, and JavaScript foundations', 'React projects for your portfolio', 'How to prepare for junior developer interviews']
+  },
+  'Mobile Development': {
+    label: 'Mobile Developer',
+    image: '/mobile_dev_kerala.png',
+    accent: 'from-green-500 to-teal-500',
+    badge: 'App-minded problem solver',
+    summary: 'You seem interested in everyday apps, smooth user experiences, and products people carry with them.',
+    why: 'Your answers show a preference for practical tools, communication, and app-based problem solving.',
+    chips: ['Android apps', 'User flows', 'App projects'],
+    roadmap: ['Programming basics for mobile apps', 'Building simple Android or cross-platform apps', 'Portfolio projects recruiters can understand']
+  },
+  'Artificial Intelligence & ML': {
+    label: 'AI Specialist',
+    image: '/ai_specialist_happy_kerala.png',
+    accent: 'from-violet-600 to-indigo-500',
+    badge: 'Automation thinker',
+    summary: 'You seem excited by smart tools, shortcuts, prediction, and systems that can learn from patterns.',
+    why: 'Your answers lean toward using technology to make decisions faster and solve problems intelligently.',
+    chips: ['Python', 'Machine learning', 'AI tools'],
+    roadmap: ['Python and data basics', 'Beginner machine learning projects', 'How to build useful AI demos without getting lost']
+  },
+  'Data Science': {
+    label: 'Data Scientist',
+    image: '/data_science_happy_kerala.png',
+    accent: 'from-cyan-600 to-blue-500',
+    badge: 'Pattern finder',
+    summary: 'You seem comfortable with facts, numbers, organization, and turning messy information into decisions.',
+    why: 'Your answers suggest patience for analysis and a habit of looking for evidence before acting.',
+    chips: ['Data analysis', 'Dashboards', 'Python'],
+    roadmap: ['Excel and statistics fundamentals', 'Python for data analysis', 'Projects using real datasets and dashboards']
+  },
+  'Cyber Security': {
+    label: 'Cyber Security Specialist',
+    image: '/security_kerala.png',
+    accent: 'from-red-600 to-orange-500',
+    badge: 'Digital protector',
+    summary: 'You seem naturally alert to safety, privacy, mistakes, and how systems can be protected.',
+    why: 'Your answers show a defensive mindset and interest in finding risks before they become problems.',
+    chips: ['Networks', 'Ethical hacking', 'Security basics'],
+    roadmap: ['Computer networks and Linux basics', 'Security tools and beginner labs', 'How to build a safe practice portfolio']
+  },
+  'Game Development': {
+    label: 'Game Developer',
+    image: '/game_dev_kerala.png',
+    accent: 'from-orange-500 to-yellow-500',
+    badge: 'Experience creator',
+    summary: 'You seem motivated by play, imagination, and creating interactive worlds that people enjoy.',
+    why: 'Your answers point toward creativity, systems thinking, and interest in how rules become experiences.',
+    chips: ['Game logic', 'Unity basics', 'Interactive projects'],
+    roadmap: ['Programming fundamentals for games', 'Small 2D game projects', 'How to turn playable demos into a portfolio']
+  }
+};
+
 export default function App() {
-  const [step, setStep] = useState('hero'); // hero, assessment, lead-magnet, success
+  const [step, setStep] = useState('hero'); // hero, assessment, success
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [userData, setUserData] = useState({ name: '', whatsapp: '' });
-  const [showRoadmapPopup, setShowRoadmapPopup] = useState(false);
   const [result, setResult] = useState(null);
-  const [analyzingText, setAnalyzingText] = useState('Initializing AI Model...');
+  const [resultCluster, setResultCluster] = useState('Web');
+  const [roadmapRequested, setRoadmapRequested] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
 
@@ -158,12 +221,15 @@ export default function App() {
     window.history.pushState({ page: 'assessment' }, '', '');
 
     // Resume if we have some answers and haven't finished yet
-    const isResuming = Object.keys(answers).length > 0 && step !== 'success' && step !== 'lead-magnet';
+    const isResuming = Object.keys(answers).length > 0 && step !== 'success';
 
     if (!isResuming) {
       setCurrentQuestionIndex(0);
       setAnswers({});
       setResult(null);
+      setResultCluster('Web');
+      setRoadmapRequested(false);
+      setUserData({ name: '', whatsapp: '' });
     }
 
     setStep('assessment');
@@ -223,8 +289,11 @@ export default function App() {
       'Game': 'Game Development'
     };
 
+    setResultCluster(winner);
     setResult(resultTitles[winner] || 'Web Development');
-    setStep('lead-magnet');
+    setRoadmapRequested(false);
+    setStep('success');
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
 
@@ -241,19 +310,22 @@ export default function App() {
     };
 
     console.log("Sending payload:", payload);
-    // Simulate API call
+    // Simulate lead capture until a delivery backend is connected.
     setTimeout(() => {
-      setStep('success');
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      // Trigger Confetti
+      setRoadmapRequested(true);
       confetti({
-        particleCount: 150,
-        spread: 70,
+        particleCount: 90,
+        spread: 60,
         origin: { y: 0.6 },
-        colors: ['#FF0000', '#FFD700', '#0000FF']
+        colors: ['#22c55e', '#2563eb', '#f8fafc']
       });
     }, 1000);
   };
+
+  const profile = resultProfiles[result] || resultProfiles['Web Development'];
+  const resultAnswerCount = Object.entries(answers)
+    .filter(([qIndex]) => questions[qIndex]?.options.some(option => option.text === answers[qIndex] && option.cluster === resultCluster))
+    .length;
 
   return (
     <div className="min-h-screen bg-white text-slate-800 font-sans selection:bg-blue-200 relative overflow-x-hidden">
@@ -271,16 +343,14 @@ export default function App() {
           <div className="flex items-center cursor-pointer" onClick={() => window.location.reload()}>
             <img src="/logo.png" alt="Brototype" className="h-10 md:h-12 w-auto" />
           </div>
-          <button
-            onClick={startAssessment}
-            disabled={step !== 'hero'}
-            className={`px-8 py-3 font-bold rounded-xl shadow-lg transition-all text-base bg-gradient-to-r from-blue-600 to-sky-500 text-white ${step !== 'hero'
-              ? 'opacity-80 cursor-not-allowed'
-              : 'hover:shadow-xl hover:scale-105'
-              }`}
-          >
-            Get Started
-          </button>
+          {step === 'hero' && (
+            <button
+              onClick={startAssessment}
+              className="px-8 py-3 font-bold rounded-xl shadow-lg transition-all text-base bg-gradient-to-r from-blue-600 to-sky-500 text-white hover:shadow-xl hover:scale-105"
+            >
+              Get Started
+            </button>
+          )}
         </div>
       </nav>
 
@@ -288,7 +358,7 @@ export default function App() {
         <AnimatePresence mode="wait">
 
           {step === 'hero' && (
-            <motion.div
+            <Motion.div
               key="hero"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -311,7 +381,7 @@ export default function App() {
 
               <div className="relative w-[95%] md:w-auto inline-block mt-6 md:mt-0">
                 <div className="absolute inset-0 bg-blue-500 rounded-2xl blur-lg opacity-50 animate-pulse"></div>
-                <motion.button
+                <Motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={startAssessment}
@@ -319,7 +389,7 @@ export default function App() {
                 >
                   {/* Moving Shimmer Effect */}
                   <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none rounded-2xl">
-                    <motion.div
+                    <Motion.div
                       initial={{ x: '-100%' }}
                       animate={{ x: '400%' }}
                       transition={{
@@ -336,18 +406,18 @@ export default function App() {
 
                   <span className="relative z-10">Find My IT Career Now</span>
                   <ArrowRight className="relative z-10 w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
-                </motion.button>
+                </Motion.button>
               </div>
 
               <div className="pt-4 md:pt-12 flex gap-4 md:gap-8 justify-center text-slate-400 text-sm md:text-base">
                 <div className="flex items-center gap-1.5 md:gap-2"><Clock className="w-4 h-4 md:w-5 md:h-5" /> 2 Mins</div>
                 <div className="flex items-center gap-1.5 md:gap-2"><Zap className="w-4 h-4 md:w-5 md:h-5" /> AI Powered</div>
               </div>
-            </motion.div>
+            </Motion.div>
           )}
 
           {step === 'assessment' && (
-            <motion.div
+            <Motion.div
               key="assessment"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -361,7 +431,7 @@ export default function App() {
                   <div className="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -translate-y-1/2 rounded-full z-0"></div>
 
                   {/* Active Progress Line */}
-                  <motion.div
+                  <Motion.div
                     className="absolute top-1/2 left-0 h-1.5 bg-green-500 -translate-y-1/2 rounded-full z-0 origin-left"
                     initial={{ width: "0%" }}
                     animate={{ width: `${(currentQuestionIndex / (questions.length - 1)) * 100}%` }}
@@ -376,7 +446,7 @@ export default function App() {
 
                       return (
                         <div key={q.id} className="relative flex flex-col items-center">
-                          <motion.div
+                          <Motion.div
                             initial={false}
                             animate={{
                               backgroundColor: isCompleted ? "#22c55e" : isCurrent ? "#2563eb" : "#ffffff",
@@ -386,29 +456,29 @@ export default function App() {
                             className={`flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full border-2 md:border-4 transition-all duration-300 shadow-md ${isCompleted || isCurrent ? 'shadow-lg' : ''}`}
                           >
                             {isCompleted ? (
-                              <motion.div
+                              <Motion.div
                                 initial={{ scale: 0, rotate: -180 }}
                                 animate={{ scale: 1, rotate: 0 }}
                                 transition={{ type: "spring", stiffness: 260, damping: 20 }}
                               >
                                 <Check className="w-5 h-5 md:w-6 md:h-6 text-white stroke-[3]" />
-                              </motion.div>
+                              </Motion.div>
                             ) : isCurrent ? (
                               <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-white rounded-full animate-ping" />
                             ) : (
                               <span className="text-xs md:text-sm text-slate-400 font-bold">{idx + 1}</span>
                             )}
-                          </motion.div>
+                          </Motion.div>
 
                           {/* Step Label (Optional, for current only maybe?) */}
                           {isCurrent && (
-                            <motion.span
+                            <Motion.span
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 5 }}
                               className="absolute top-full mt-1 text-[10px] font-bold text-blue-600 uppercase tracking-widest min-w-max hidden md:block"
                             >
                               Step {idx + 1}
-                            </motion.span>
+                            </Motion.span>
                           )}
                         </div>
                       )
@@ -417,7 +487,7 @@ export default function App() {
                 </div>
 
                 <AnimatePresence mode="wait">
-                  <motion.div
+                  <Motion.div
                     key={currentQuestionIndex}
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -453,310 +523,139 @@ export default function App() {
                         ))}
                       </div>
                     </div>
-                  </motion.div>
+                  </Motion.div>
                 </AnimatePresence>
               </div>
-            </motion.div>
-          )}
-
-          {step === 'analyzing' && (
-            <motion.div
-              key="analyzing"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="w-full max-w-lg bg-white/90 backdrop-blur-2xl p-12 rounded-3xl shadow-2xl border border-white/60 text-center relative overflow-hidden"
-            >
-              {/* Complex Background Tech Effect */}
-              <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(59,130,246,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.1)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-                <motion.div
-                  initial={{ y: '-100%' }}
-                  animate={{ y: '100%' }}
-                  transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
-                  className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-transparent via-blue-400/20 to-transparent"
-                />
-              </div>
-
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="w-32 h-32 mb-10 relative flex items-center justify-center">
-                  {/* Outer Pulsing Ring */}
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute inset-0 rounded-full bg-blue-100 blur-xl"
-                  />
-
-                  {/* Rotating Dashed Rings */}
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-0 rounded-full border border-dashed border-blue-200"
-                  />
-                  <motion.div
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-2 rounded-full border border-dotted border-indigo-300"
-                  />
-
-                  {/* Active Segment Rings */}
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inset-0 rounded-full border-t-4 border-r-4 border-transparent border-t-blue-500 border-r-blue-500 rounded-full"
-                  />
-                  <motion.div
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inset-4 rounded-full border-b-2 border-l-2 border-transparent border-b-sky-500 border-l-sky-500 rounded-full"
-                  />
-
-                  {/* Central Brain Icon with Pulse */}
-                  <motion.div
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="bg-white p-5 rounded-2xl shadow-xl shadow-blue-200/50 relative z-10"
-                  >
-                    {analyzingText === 'Analysing your thinking style...' && <Cpu className="w-12 h-12 text-purple-600" />}
-                    {analyzingText === 'Finding suitable IT careers...' && <Database className="w-12 h-12 text-amber-500" />}
-                    {analyzingText === 'Creating your personal roadmap...' && <Map className="w-12 h-12 text-green-500" />}
-                    {analyzingText === 'Initializing AI Model...' && <Brain className="w-12 h-12 text-blue-600" />}
-                  </motion.div>
-                </div>
-
-                <motion.h2
-                  key={analyzingText} // key change triggers animation
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 h-16 flex items-center justify-center"
-                >
-                  {analyzingText}
-                </motion.h2>
-
-                <p className="text-slate-500 font-medium animate-pulse">
-                  AI is calibrating your personalized roadmap...
-                </p>
-
-                {/* Advanced Loading Bar */}
-                <div className="w-full max-w-xs h-3 bg-slate-100 rounded-full mt-8 overflow-hidden relative shadow-inner">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-blue-600 via-sky-400 to-blue-600 background-animate"
-                    initial={{ x: "-100%" }}
-                    animate={{ x: "100%" }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                    style={{ backgroundSize: '200% 100%' }}
-                  />
-                  {/* Processing blips */}
-                  <motion.div
-                    animate={{ opacity: [0, 1, 0] }}
-                    transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.2 }}
-                    className="absolute top-0 right-0 h-full w-2 bg-white/50 blur-[2px]"
-                  />
-                </div>
-
-
-              </div>
-            </motion.div>
-          )}
-
-          {step === 'lead-magnet' && (
-            <motion.div
-              key="lead-magnet"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="w-full max-w-md bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/50"
-            >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-200 animate-bounce">
-                  <Check className="w-8 h-8 text-white stroke-[3]" />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-900">Your Career Result is Ready!</h2>
-                <p className="text-slate-600 mt-2">Enter your WhatsApp number <br /> to know your career result</p>
-              </div>
-
-              <form onSubmit={handleLeadSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    placeholder="Enter your Name"
-                    value={userData.name}
-                    onChange={e => setUserData({ ...userData, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp Number</label>
-                  <input
-                    type="tel"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    placeholder="Enter your WhatsApp Number"
-                    value={userData.whatsapp}
-                    onChange={e => setUserData({ ...userData, whatsapp: e.target.value })}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-700 shadow-2xl shadow-green-500/40 border-t border-white/30 ring-1 ring-white/20 transform hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 relative overflow-hidden"
-                >
-                  <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
-                  <span className="relative z-10 flex items-center gap-2">
-                    Get My Roadmap <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
-                  </span>
-                </button>
-              </form>
-            </motion.div>
+            </Motion.div>
           )}
 
           {step === 'success' && (
-            <motion.div
+            <Motion.div
               key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="w-full px-4 md:px-0 md:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%] mt-20 md:mt-0"
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              className="w-full max-w-5xl mt-16 md:mt-4"
             >
-              <div className="bg-white/80 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden">
-                <div className="grid grid-cols-1 md:grid-cols-12 md:min-h-[500px]">
-
-                  {/* Left Side: Visuals & Headline */}
-                  {/* Left Side: Visuals */}
-                  <div className="md:col-span-5 bg-gradient-to-br from-blue-50/50 to-indigo-50/20 relative border-b md:border-b-0 md:border-r border-white/60 min-h-[300px] md:min-h-full overflow-hidden">
-                    {/* Decorative blobs */}
-                    <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                      <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-40"></div>
-                      <div className="absolute bottom-0 right-0 w-40 h-40 bg-indigo-100 rounded-full blur-3xl opacity-40"></div>
-                    </div>
-
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/70">
+                <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr]">
+                  <div className="relative min-h-[220px] overflow-hidden bg-slate-100 lg:min-h-full">
                     <img
-                      src={
-                        result === 'Web Development' ? '/web_dev_kerala.png' :
-                          result === 'Mobile Development' ? '/mobile_dev_kerala.png' :
-                            result === 'Data Science' ? '/data_science_happy_kerala.png' :
-                              result === 'Cyber Security' ? '/security_kerala.png' :
-                                result === 'Game Development' ? '/game_dev_kerala.png' :
-                                  result === 'Artificial Intelligence & ML' ? '/ai_specialist_happy_kerala.png' : // Reuse Data char for AI
-                                    '/web_dev_kerala.png' // Default
-                      }
-                      alt={result}
-                      className="w-full h-full object-cover absolute inset-0 z-10"
+                      src={profile.image}
+                      alt={profile.label}
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 to-transparent p-5">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white/75">Your result</p>
+                      <h2 className="mt-1 text-3xl font-black leading-tight text-white">{profile.label}</h2>
+                    </div>
                   </div>
 
-                  {/* Right Side: Content & CTA */}
-                  <div className="md:col-span-7 p-4 md:p-6 flex flex-col justify-center text-left bg-white/40">
-
-                    <div className="mb-6">
-                      <span className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-blue-100 text-blue-700 text-xs md:text-sm font-bold uppercase tracking-wider mb-3 rounded-full">
-                        Way to go, {userData.name}!
+                  <div className="p-5 text-left md:p-7">
+                    <div className="mb-5">
+                      <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-700">
+                        <Sparkles className="h-4 w-4" />
+                        Based on your answers
                       </span>
-                      <h2 className="text-2xl md:text-4xl font-black text-slate-900 leading-tight mb-4">
-                        {result === 'Web Development' && <>You're a natural <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-500">Web Developer</span>.</>}
-                        {result === 'Mobile Development' && <>You're a natural <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-teal-500">Mobile Developer</span>.</>}
-                        {result === 'Artificial Intelligence & ML' && <>You're a natural <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-indigo-500">AI Specialist</span>.</>}
-                        {result === 'Data Science' && <>You're a natural <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-blue-500">Data Scientist</span>.</>}
-                        {result === 'Cyber Security' && <>You're a natural <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-500">Cyber Security Expert</span>.</>}
-                        {result === 'Game Development' && <>You're a natural <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-yellow-500">Game Developer</span>.</>}
-                      </h2>
-
-                      {/* Short Body Text */}
-                      <p className="text-slate-600 text-lg md:text-xl font-medium mb-6">
-                        {result === 'Web Development' && "Build beautiful, interactive websites and apps."}
-                        {result === 'Mobile Development' && "Create the apps that people use every day."}
-                        {result === 'Artificial Intelligence & ML' && "Teach computers to think, learn, and predict."}
-                        {result === 'Data Science' && "Uncover hidden truths and patterns in big data."}
-                        {result === 'Cyber Security' && "Protect digital systems from hackers and threats."}
-                        {result === 'Game Development' && "Design immersive worlds and fun experiences."}
+                      <h1 className="text-2xl font-black leading-tight text-slate-950 md:text-4xl">
+                        You are a strong fit for <span className={`bg-gradient-to-r ${profile.accent} bg-clip-text text-transparent`}>{profile.label}</span>
+                      </h1>
+                      <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-slate-600 md:text-base">
+                        {profile.summary}
                       </p>
-
-                      {/* Value Chips */}
-                      <div className="flex flex-wrap gap-2 mb-6">
-                        {result === 'Web Development' && <>
-                          <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold">🎨 Creative</span>
-                          <span className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">🖌️ Visual</span>
-                          <span className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded-lg text-sm font-bold">🌐 Internet</span>
-                        </>}
-                        {result === 'Mobile Development' && <>
-                          <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-bold">📱 Apps</span>
-                          <span className="px-3 py-1.5 bg-teal-100 text-teal-700 rounded-lg text-sm font-bold">👆 Touch</span>
-                          <span className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold">🚀 Portable</span>
-                        </>}
-                        {result === 'AI & ML' || result === 'Artificial Intelligence & ML' && <>
-                          <span className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold">🧠 Smart Systems</span>
-                          <span className="px-3 py-1.5 bg-violet-100 text-violet-700 rounded-lg text-sm font-bold">🤖 Automation</span>
-                          <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold">🔮 Future</span>
-                        </>}
-                        {result === 'Data Science' && <>
-                          <span className="px-3 py-1.5 bg-cyan-100 text-cyan-700 rounded-lg text-sm font-bold">📊 Analytics</span>
-                          <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold">📈 Trends</span>
-                          <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold">🔢 Big Data</span>
-                        </>}
-                        {result === 'Cyber Security' && <>
-                          <span className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-bold">🛡️ Defense</span>
-                          <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold">🔒 Protection</span>
-                          <span className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold">🕵️ Ethical Hacking</span>
-                        </>}
-                        {result === 'Game Development' && <>
-                          <span className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">🎮 Gameplay</span>
-                          <span className="px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-bold">🌍 3D Worlds</span>
-                          <span className="px-3 py-1.5 bg-pink-100 text-pink-700 rounded-lg text-sm font-bold">🎲 Fun</span>
-                        </>}
-                      </div>
                     </div>
 
-                    {/* Roadmap Box */}
-                    <div className="bg-green-50 border border-green-200 rounded-2xl p-4 md:p-5 mb-4 md:mb-6 flex items-center gap-3 md:gap-4 shadow-sm">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center text-lg md:text-2xl shadow-sm shrink-0">
-                        📱
+                    <div className="rounded-2xl border border-green-200 bg-green-50 p-4 md:p-5">
+                      <div className="mb-4 flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-green-600 shadow-sm">
+                          <FileText className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-black text-slate-950 md:text-xl">Want the free roadmap?</h3>
+                          <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
+                            We will send the {profile.label} PDF on WhatsApp.
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-base md:text-lg font-bold text-slate-900 mb-0.5">Check your WhatsApp!</h3>
-                        <p className="text-slate-600 text-xs md:text-sm font-medium">Your step-by-step roadmap to a ₹40k+ job is waiting.</p>
+
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                          {Math.max(resultAnswerCount, 1)} matching answer{resultAnswerCount === 1 ? '' : 's'}
+                        </span>
+                        {profile.chips.slice(0, 2).map((chip) => (
+                          <span key={chip} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                            {chip}
+                          </span>
+                        ))}
                       </div>
-                    </div>
 
+                      <div className="mb-4 grid gap-2 md:grid-cols-3">
+                        {profile.roadmap.slice(0, 3).map((item) => (
+                          <div key={item} className="flex items-start gap-2 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold leading-snug text-slate-700">
+                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
 
-
-
-
-
-
-
-
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Start Learning Now</span>
-                      <a
-                        href="https://www.youtube.com/@BrototypeMalayalam"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-3.5 md:py-4 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white rounded-xl font-bold text-sm sm:text-base md:text-lg shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 md:gap-3 group px-2"
-                      >
-                        <svg className="w-6 h-6 md:w-7 md:h-7 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path fill="#FF0000" d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816z" />
-                          <path fill="#FFFFFF" d="M9.615 8.816l8 3.993-8 4.007z" />
-                        </svg>
-                        <span className="truncate">Start Your First Lesson (Free)</span>
-                        <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform text-white/80 shrink-0" />
-                      </a>
-
+                      {roadmapRequested ? (
+                        <Motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="rounded-2xl bg-white p-4 text-center shadow-sm"
+                        >
+                          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
+                            <Check className="h-6 w-6 stroke-[3]" />
+                          </div>
+                          <h4 className="text-base font-black text-slate-950">Roadmap request received</h4>
+                          <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
+                            Thanks, {userData.name}. We will send the {profile.label} roadmap to {userData.whatsapp} on WhatsApp.
+                          </p>
+                        </Motion.div>
+                      ) : (
+                        <form onSubmit={handleLeadSubmit} className="grid gap-3 md:grid-cols-2">
+                          <div className="flex flex-col">
+                            <label className="mb-1.5 flex min-h-0 items-end text-sm font-bold text-slate-800 md:min-h-[2.75rem]">What name should we call you?</label>
+                            <input
+                              type="text"
+                              required
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-green-500 focus:ring-4 focus:ring-green-100"
+                              placeholder="Your name"
+                              value={userData.name}
+                              onChange={e => setUserData({ ...userData, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <label className="mb-1.5 flex min-h-0 items-end text-sm font-bold text-slate-800 md:min-h-[2.75rem]">Which WhatsApp number should we send your roadmap to?</label>
+                            <input
+                              type="tel"
+                              required
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-green-500 focus:ring-4 focus:ring-green-100"
+                              placeholder="WhatsApp number"
+                              value={userData.whatsapp}
+                              onChange={e => setUserData({ ...userData, whatsapp: e.target.value })}
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3.5 text-sm font-black text-white shadow-xl shadow-green-600/20 transition-all hover:-translate-y-0.5 hover:bg-green-700 active:translate-y-0 md:col-span-2"
+                          >
+                            <MessageCircle className="h-5 w-5" />
+                            Send my free roadmap on WhatsApp
+                          </button>
+                        </form>
+                      )}
                     </div>
 
                   </div>
-
                 </div>
               </div>
-            </motion.div>
+            </Motion.div>
           )}
-
-
-
-
         </AnimatePresence>
       </main>
-      <footer className="w-full bg-white border-t border-slate-100 py-8 md:py-16 mt-auto">
+      {step !== 'success' && <footer className="w-full bg-white border-t border-slate-100 py-8 md:py-16 mt-auto">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8">
 
           {/* Left: Logo */}
@@ -795,7 +694,7 @@ export default function App() {
             </a>
           </div>
         </div>
-      </footer>
+      </footer>}
     </div >
   );
 }
