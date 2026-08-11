@@ -97,6 +97,25 @@ const questions = [
   }
 ];
 
+const heroCopy = {
+  originalMalayalam: {
+    prefix: 'AI ഉപയോഗിച്ച് നിങ്ങൾക്ക് പറ്റിയ',
+    career: 'IT Career',
+    action: 'കണ്ടെത്തൂ,',
+    durationPrefix: 'വെറും',
+    durationNumber: '2',
+    durationSuffix: 'മിനിറ്റിൽ...'
+  },
+  english: {
+    prefix: 'Discover the',
+    career: 'IT Career',
+    action: 'That Fits You',
+    durationPrefix: 'in just',
+    durationNumber: '2',
+    durationSuffix: 'minutes...'
+  }
+};
+
 export default function App() {
   const [step, setStep] = useState('hero'); // hero, assessment, lead-magnet, success
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -279,10 +298,10 @@ export default function App() {
             >
               <div className="space-y-5">
                 <h1 className="text-[1.5rem] xs:text-[1.8rem] sm:text-3xl md:text-6xl font-black text-slate-900 leading-tight tracking-tighter pb-1">
-                  <span className="inline-block whitespace-nowrap"><span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">AI</span> ഉപയോഗിച്ച് നിങ്ങൾക്ക് പറ്റിയ</span> <br className="md:hidden" />
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">IT Career</span> <br className="hidden md:block" />
-                  കണ്ടെത്തൂ, <br className="md:hidden" />
-                  വെറും <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">2</span> മിനിറ്റിൽ...
+                  <span className="inline-block whitespace-nowrap">{heroCopy.english.prefix}</span> <br className="md:hidden" />
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">{heroCopy.english.career}</span> <br className="hidden md:block" />
+                  {heroCopy.english.action} with <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">AI</span>, <br className="md:hidden" />
+                  {heroCopy.english.durationPrefix} <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">{heroCopy.english.durationNumber}</span> {heroCopy.english.durationSuffix}
                 </h1>
                 <p className="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed">
                   Find your perfect IT career path <br className="md:hidden" />
