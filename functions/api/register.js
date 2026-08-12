@@ -41,6 +41,16 @@ const json = (body, status = 200) => (
   new Response(JSON.stringify(body), { status, headers: responseHeaders })
 );
 
+class SupabaseInsertError extends Error {
+  constructor(table, status, detail) {
+    super(`Supabase insert failed for ${table}: ${detail}`);
+    this.name = 'SupabaseInsertError';
+    this.table = table;
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 const normalizeEndpoint = (endpoint) => endpoint.replace(/\/+$/, '');
 
 function getWatiV3Base(endpoint) {
@@ -190,10 +200,24 @@ async function insertSupabase(env, table, row) {
   if (!response.ok) {
     const detail = await response.text();
     debugLog(env, 'supabase insert:failed', { table, status: response.status, detail });
-    throw new Error(`Supabase insert failed for ${table}: ${detail}`);
+    throw new SupabaseInsertError(table, response.status, detail);
   }
 
   debugLog(env, 'supabase insert:ok', { table, status: response.status });
+}
+
+function isDuplicateRegistrationError(error) {
+  if (!(error instanceof SupabaseInsertError)) {
+    return false;
+  }
+
+  return error.table === 'career_assessment_leads'
+    && (
+      error.status === 409
+      || error.detail.includes('23505')
+      || error.detail.toLowerCase().includes('duplicate key')
+      || error.detail.includes('career_assessment_leads_phone_number_unique_idx')
+    );
 }
 
 function toLeadInsertRow(lead) {
@@ -213,7 +237,17 @@ function validateOrigin(env, request) {
     .filter(Boolean);
   const origin = request.headers.get('Origin') || '';
 
-  return allowedOrigins.includes(origin);
+  return allowedOrigins.some((allowedOrigin) => {
+    if (allowedOrigin.includes('*')) {
+      const pattern = `^${allowedOrigin
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\\\*/g, '[^.]+')}$`;
+
+      return new RegExp(pattern).test(origin);
+    }
+
+    return allowedOrigin === origin;
+  });
 }
 
 function sanitizeProviderResponse(value) {
@@ -415,6 +449,19 @@ async function handlePost(context) {
 
     await insertSupabase(env, 'career_assessment_leads', toLeadInsertRow(lead));
   } catch (error) {
+    if (isDuplicateRegistrationError(error)) {
+      debugLog(env, 'request:duplicate', {
+        requestId,
+        phone: lead?.whatsapp_number ? maskPhone(lead.whatsapp_number) : null
+      });
+
+      return json({
+        success: false,
+        code: 'already_registered',
+        message: 'This WhatsApp number is already registered.'
+      }, 409);
+    }
+
     console.error('[register] save failed', stringifyError(error));
     return json({
       success: false,

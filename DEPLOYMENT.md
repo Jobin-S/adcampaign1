@@ -12,7 +12,7 @@
 Apply the SQL migration before routing production traffic:
 
 ```bash
-supabase/migrations/20260812191400_create_career_assessment_leads.sql
+supabase/migrations/*.sql
 ```
 
 The migration enables RLS and grants `anon` insert-only access to:
@@ -21,6 +21,13 @@ The migration enables RLS and grants `anon` insert-only access to:
 - `career_assessment_delivery_events`
 
 There is no public `SELECT`, `UPDATE`, or `DELETE` grant.
+
+The phone number unique index blocks duplicate registrations:
+
+```sql
+create unique index if not exists career_assessment_leads_phone_number_unique_idx
+  on public.career_assessment_leads (phone_number);
+```
 
 ## Cloudflare Environment Variables
 
@@ -31,7 +38,7 @@ SUPABASE_URL=https://uyccjtzxlgpyczbucjkq.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_lWAXhhDqiEFh5YN6CNrFmw_vBvx05ct
 WATI_API_ENDPOINT=https://live-mt-server.wati.io
 WATI_CHANNEL=
-ALLOWED_ORIGINS=https://your-production-domain.com,https://your-project.pages.dev
+ALLOWED_ORIGINS=https://your-production-domain.com,https://your-project.pages.dev,https://*.your-project.pages.dev
 REGISTER_DEBUG=0
 TEST_MODE=0
 ```

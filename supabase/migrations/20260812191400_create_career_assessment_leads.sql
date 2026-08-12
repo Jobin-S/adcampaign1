@@ -26,7 +26,7 @@ create table if not exists public.career_assessment_leads (
 create index if not exists career_assessment_leads_created_at_idx
   on public.career_assessment_leads (created_at desc);
 
-create index if not exists career_assessment_leads_phone_number_idx
+create unique index if not exists career_assessment_leads_phone_number_unique_idx
   on public.career_assessment_leads (phone_number);
 
 create index if not exists career_assessment_leads_assigned_path_idx
