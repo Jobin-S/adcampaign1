@@ -187,6 +187,8 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [resultCluster, setResultCluster] = useState('Web');
   const [roadmapRequested, setRoadmapRequested] = useState(false);
+  const [registerSubmitting, setRegisterSubmitting] = useState(false);
+  const [registerError, setRegisterError] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
 
 
@@ -229,6 +231,8 @@ export default function App() {
       setResult(null);
       setResultCluster('Web');
       setRoadmapRequested(false);
+      setRegisterError('');
+      setRegisterSubmitting(false);
       setUserData({ name: '', whatsapp: '' });
     }
 
@@ -292,26 +296,43 @@ export default function App() {
     setResultCluster(winner);
     setResult(resultTitles[winner] || 'Web Development');
     setRoadmapRequested(false);
+    setRegisterError('');
+    setRegisterSubmitting(false);
     setStep('success');
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
 
-  const handleLeadSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!userData.name || userData.whatsapp.length !== 10) return;
+    if (!userData.name.trim() || userData.whatsapp.length !== 10 || registerSubmitting) return;
 
-    // Payload
-    const payload = {
-      user_name: userData.name,
-      phone_number: userData.whatsapp,
-      assigned_path: result,
-      language_preference: "Malayalam/English mix" // Static for now as per requirements
-    };
+    setRegisterSubmitting(true);
+    setRegisterError('');
 
-    console.log("Sending payload:", payload);
-    // Simulate lead capture until a delivery backend is connected.
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userData.name,
+          whatsapp: userData.whatsapp,
+          user_name: userData.name,
+          phone_number: userData.whatsapp,
+          assigned_path: result,
+          result_cluster: resultCluster,
+          category: answers[8] || null,
+          answers,
+          language_preference: "Malayalam/English mix",
+          source: 'career-assessment-landing'
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Could not send your roadmap right now. Please try again.');
+      }
+
       setRoadmapRequested(true);
       confetti({
         particleCount: 90,
@@ -319,7 +340,11 @@ export default function App() {
         origin: { y: 0.6 },
         colors: ['#22c55e', '#2563eb', '#f8fafc']
       });
-    }, 1000);
+    } catch (error) {
+      setRegisterError(error.message || 'Could not send your roadmap right now. Please try again.');
+    } finally {
+      setRegisterSubmitting(false);
+    }
   };
 
   const profile = resultProfiles[result] || resultProfiles['Web Development'];
@@ -614,7 +639,7 @@ export default function App() {
                           </p>
                         </Motion.div>
                       ) : (
-                        <form onSubmit={handleLeadSubmit} className="grid gap-3 md:grid-cols-2">
+                        <form onSubmit={handleRegisterSubmit} className="grid gap-3 md:grid-cols-2">
                           <div className="flex flex-col">
                             <label className="mb-1.5 flex min-h-0 items-end text-sm font-bold text-slate-800 md:min-h-[2.75rem]">What name should we call you?</label>
                             <input
@@ -623,7 +648,10 @@ export default function App() {
                               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-green-500 focus:ring-4 focus:ring-green-100"
                               placeholder="Your name"
                               value={userData.name}
-                              onChange={e => setUserData({ ...userData, name: e.target.value })}
+                              onChange={e => {
+                                setRegisterError('');
+                                setUserData({ ...userData, name: e.target.value });
+                              }}
                             />
                           </div>
                           <div className="flex flex-col">
@@ -637,15 +665,24 @@ export default function App() {
                               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-green-500 focus:ring-4 focus:ring-green-100"
                               placeholder="WhatsApp number"
                               value={userData.whatsapp}
-                              onChange={e => setUserData({ ...userData, whatsapp: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                              onChange={e => {
+                                setRegisterError('');
+                                setUserData({ ...userData, whatsapp: e.target.value.replace(/\D/g, '').slice(0, 10) });
+                              }}
                             />
                           </div>
+                          {registerError && (
+                            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 md:col-span-2">
+                              {registerError}
+                            </p>
+                          )}
                           <button
                             type="submit"
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3.5 text-sm font-black text-white shadow-xl shadow-green-600/20 transition-all hover:-translate-y-0.5 hover:bg-green-700 active:translate-y-0 md:col-span-2"
+                            disabled={registerSubmitting}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3.5 text-sm font-black text-white shadow-xl shadow-green-600/20 transition-all hover:-translate-y-0.5 hover:bg-green-700 active:translate-y-0 disabled:cursor-not-allowed disabled:bg-green-400 disabled:hover:translate-y-0 md:col-span-2"
                           >
                             <MessageCircle className="h-5 w-5" />
-                            Send my free roadmap on WhatsApp
+                            {registerSubmitting ? 'Sending roadmap...' : 'Send my free roadmap on WhatsApp'}
                           </button>
                         </form>
                       )}
