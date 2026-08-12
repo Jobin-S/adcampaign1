@@ -1,5 +1,8 @@
 const TEMPLATE_NAME = 'findyourdomain';
 const INDIA_PREFIX = '91';
+const MAX_BODY_BYTES = 16 * 1024;
+const MAX_ANSWER_TEXT_LENGTH = 160;
+const ALLOWED_SOURCES = new Set(['landing', 'career-assessment-landing', 'local-test']);
 
 const ROADMAPS = {
   'Game Development': {
@@ -20,7 +23,7 @@ const ROADMAPS = {
   },
   'Artificial Intelligence & ML': {
     domain: 'Machine Learning',
-    roadmap_url: 'https://docs.google.com/document/d/1lV69X8S_s6OZlbfyJ3dQhWh0nMkMA0Dimxl30YvREww/edit?usp=drive_link'
+    roadmap_url: 'https://docs.google.com/document/d/1Oyw2xqXoIJ3pq0ttI6-VWO1Sx4d9To7g7lm9PXSBcfo/edit?usp=sharing'
   },
   'Data Science': {
     domain: 'Data Science',
@@ -30,7 +33,8 @@ const ROADMAPS = {
 
 const responseHeaders = {
   'Content-Type': 'application/json',
-  'Cache-Control': 'no-store'
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff'
 };
 
 const json = (body, status = 200) => (
@@ -68,10 +72,28 @@ function stringifyError(error) {
 }
 
 async function parseJson(request) {
+  const contentType = request.headers.get('Content-Type') || '';
+
+  if (!contentType.toLowerCase().includes('application/json')) {
+    return { error: 'content-type' };
+  }
+
+  const contentLength = Number(request.headers.get('Content-Length') || 0);
+
+  if (contentLength > MAX_BODY_BYTES) {
+    return { error: 'too-large' };
+  }
+
   try {
-    return await request.json();
+    const bodyText = await request.text();
+
+    if (bodyText.length > MAX_BODY_BYTES) {
+      return { error: 'too-large' };
+    }
+
+    return { body: JSON.parse(bodyText) };
   } catch {
-    return null;
+    return { error: 'invalid-json' };
   }
 }
 
@@ -89,7 +111,13 @@ function validateLead(body) {
   const phoneNumber = typeof body?.whatsapp === 'string' ? body.whatsapp.replace(/\D/g, '') : '';
   const assignedPath = typeof body?.assigned_path === 'string' ? body.assigned_path.trim() : '';
   const category = typeof body?.category === 'string' ? body.category.trim().slice(0, 80) : null;
+  const source = typeof body?.source === 'string' ? body.source.trim().slice(0, 80) : 'landing';
+  const honeypot = typeof body?.website === 'string' ? body.website.trim() : '';
   const roadmap = ROADMAPS[assignedPath];
+
+  if (honeypot) {
+    return { error: 'Please submit the form again.' };
+  }
 
   if (!name) {
     return { error: 'Please enter your name.' };
@@ -103,6 +131,10 @@ function validateLead(body) {
     return { error: 'We could not match this result to a roadmap. Please retake the quiz.' };
   }
 
+  if (!ALLOWED_SOURCES.has(source)) {
+    return { error: 'Please submit the form again.' };
+  }
+
   return {
     lead: {
       id: crypto.randomUUID(),
@@ -113,10 +145,23 @@ function validateLead(body) {
       domain: roadmap.domain,
       roadmap_url: roadmap.roadmap_url,
       category,
-      answers: body?.answers && typeof body.answers === 'object' ? body.answers : {},
-      source: typeof body?.source === 'string' ? body.source.trim().slice(0, 80) : 'landing'
+      answers: sanitizeAnswers(body?.answers),
+      source
     }
   };
+}
+
+function sanitizeAnswers(answers) {
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(answers)
+      .slice(0, 12)
+      .filter(([key, value]) => /^\d+$/.test(key) && typeof value === 'string')
+      .map(([key, value]) => [key, value.trim().slice(0, MAX_ANSWER_TEXT_LENGTH)])
+  );
 }
 
 function assertEnv(env, keys) {
@@ -158,7 +203,66 @@ function toLeadInsertRow(lead) {
   return leadInsertRow;
 }
 
+function validateOrigin(env, request) {
+  if (!env.ALLOWED_ORIGINS) {
+    return true;
+  }
+
+  const allowedOrigins = env.ALLOWED_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const origin = request.headers.get('Origin') || '';
+
+  return allowedOrigins.includes(origin);
+}
+
+function sanitizeProviderResponse(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(/\b91\d{10}\b/g, '[masked-phone]')
+      .replace(/\b\d{10}\b/g, '[masked-phone]');
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeProviderResponse(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => {
+        if (/token|authorization|api[-_]?key|secret/i.test(key)) {
+          return [key, '[hidden]'];
+        }
+
+        if (/phone|mobile|whatsapp|recipient/i.test(key) && typeof item === 'string') {
+          return [key, maskPhone(item)];
+        }
+
+        return [key, sanitizeProviderResponse(item)];
+      })
+    );
+  }
+
+  return value;
+}
+
 async function sendWatiTemplate(env, lead) {
+  if (env.TEST_MODE === '1' || env.TEST_MODE === 'true') {
+    return {
+      ok: true,
+      status: 200,
+      requestLog: {
+        template_name: TEMPLATE_NAME,
+        broadcast_name: `${TEMPLATE_NAME}_${lead.id}`,
+        channel: env.WATI_CHANNEL || null,
+        recipient: maskPhone(lead.whatsapp_number),
+        custom_params: ['name', 'domain', 'link'],
+        test_mode: true
+      },
+      responseBody: { test_mode: true }
+    };
+  }
+
   const broadcastName = `${TEMPLATE_NAME}_${lead.id}`;
   const customParams = [
     { name: 'name', value: lead.name },
@@ -179,19 +283,22 @@ async function sendWatiTemplate(env, lead) {
   const watiBase = getWatiV3Base(env.WATI_API_ENDPOINT);
   const watiUrl = `${watiBase}/api/ext/v3/messageTemplates/send`;
   const requestLog = {
-    endpoint: watiUrl,
-    configured_endpoint: normalizeEndpoint(env.WATI_API_ENDPOINT),
     template_name: TEMPLATE_NAME,
     broadcast_name: broadcastName,
     channel: env.WATI_CHANNEL || null,
     recipient: maskPhone(lead.whatsapp_number),
-    custom_params: customParams.map((param) => ({
+    custom_params: customParams.map((param) => param.name)
+  };
+
+  debugLog(env, 'wati send:start', {
+    ...requestLog,
+    endpoint: watiUrl,
+    configured_endpoint: normalizeEndpoint(env.WATI_API_ENDPOINT),
+    custom_params_preview: customParams.map((param) => ({
       name: param.name,
       value: param.name === 'link' ? '[roadmap link configured]' : param.value
     }))
-  };
-
-  debugLog(env, 'wati send:start', requestLog);
+  });
 
   const response = await fetch(watiUrl, {
     method: 'POST',
@@ -232,7 +339,7 @@ async function recordDeliveryEvent(env, leadId, watiResult) {
     template_name: TEMPLATE_NAME,
     status: watiResult.ok ? 'sent' : 'failed',
     request: watiResult.requestLog,
-    response: watiResult.responseBody,
+    response: sanitizeProviderResponse(watiResult.responseBody),
     error: watiResult.ok ? null : `WATI returned HTTP ${watiResult.status}`
   });
 }
@@ -251,7 +358,25 @@ function optionsResponse() {
 async function handlePost(context) {
   const { request, env } = context;
   const requestId = crypto.randomUUID();
-  const body = await parseJson(request);
+  const parsed = await parseJson(request);
+
+  if (parsed.error === 'content-type') {
+    return json({ success: false, message: 'Please submit the form again.' }, 415);
+  }
+
+  if (parsed.error === 'too-large') {
+    return json({ success: false, message: 'Please submit the form again.' }, 413);
+  }
+
+  if (parsed.error) {
+    return json({ success: false, message: 'Please submit the form again.' }, 400);
+  }
+
+  if (!validateOrigin(env, request)) {
+    return json({ success: false, message: 'Please submit the form again.' }, 403);
+  }
+
+  const body = parsed.body;
 
   debugLog(env, 'request:start', {
     requestId,
@@ -259,10 +384,6 @@ async function handlePost(context) {
     assigned_path: body?.assigned_path,
     phone: typeof body?.whatsapp === 'string' ? maskPhone(`${INDIA_PREFIX}${body.whatsapp.replace(/\D/g, '')}`) : null
   });
-
-  if (!body) {
-    return json({ success: false, message: 'Please submit the form again.' }, 400);
-  }
 
   let lead;
 
@@ -307,14 +428,11 @@ async function handlePost(context) {
 
     if (!watiResult.ok) {
       const isRateLimited = watiResult.status === 429;
-      const debugMessage = isDebugEnabled(env)
-        ? ` WATI status: ${watiResult.status}. Response: ${JSON.stringify(watiResult.responseBody).slice(0, 300)}`
-        : '';
       return json({
         success: false,
         message: isRateLimited
-          ? `WhatsApp is busy right now. Please try again in a few minutes.${debugMessage}`
-          : `We saved your request, but could not send the WhatsApp message right now. Please try again.${debugMessage}`
+          ? 'WhatsApp is busy right now. Please try again in a few minutes.'
+          : 'We saved your request, but could not send the WhatsApp message right now. Please try again.'
       }, isRateLimited ? 429 : 502);
     }
 

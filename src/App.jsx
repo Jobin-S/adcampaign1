@@ -189,6 +189,7 @@ export default function App() {
   const [roadmapRequested, setRoadmapRequested] = useState(false);
   const [registerSubmitting, setRegisterSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState('');
+  const [website, setWebsite] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
 
 
@@ -233,6 +234,7 @@ export default function App() {
       setRoadmapRequested(false);
       setRegisterError('');
       setRegisterSubmitting(false);
+      setWebsite('');
       setUserData({ name: '', whatsapp: '' });
     }
 
@@ -298,6 +300,7 @@ export default function App() {
     setRoadmapRequested(false);
     setRegisterError('');
     setRegisterSubmitting(false);
+    setWebsite('');
     setStep('success');
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -323,6 +326,7 @@ export default function App() {
           result_cluster: resultCluster,
           category: answers[8] || null,
           answers,
+          website,
           language_preference: "Malayalam/English mix",
           source: 'career-assessment-landing'
         })
@@ -640,6 +644,16 @@ export default function App() {
                         </Motion.div>
                       ) : (
                         <form onSubmit={handleRegisterSubmit} className="grid gap-3 md:grid-cols-2">
+                          <label className="hidden">
+                            Website
+                            <input
+                              type="text"
+                              tabIndex={-1}
+                              autoComplete="off"
+                              value={website}
+                              onChange={e => setWebsite(e.target.value)}
+                            />
+                          </label>
                           <div className="flex flex-col">
                             <label className="mb-1.5 flex min-h-0 items-end text-sm font-bold text-slate-800 md:min-h-[2.75rem]">What name should we call you?</label>
                             <input
