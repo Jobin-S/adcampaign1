@@ -38,7 +38,7 @@ SUPABASE_URL=https://uyccjtzxlgpyczbucjkq.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_lWAXhhDqiEFh5YN6CNrFmw_vBvx05ct
 WATI_API_ENDPOINT=https://live-mt-server.wati.io
 WATI_CHANNEL=
-ALLOWED_ORIGINS=https://your-production-domain.com,https://your-project.pages.dev,https://*.your-project.pages.dev
+ALLOWED_ORIGINS=https://your-production-domain.com,https://your-project.pages.dev,https://*.your-project.pages.dev,https://brototype.com,https://www.brototype.com
 REGISTER_DEBUG=0
 TEST_MODE=0
 ```
