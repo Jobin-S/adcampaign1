@@ -27,7 +27,7 @@ const ROADMAPS = {
   },
   'Data Science': {
     domain: 'Data Science',
-    roadmap_url: 'https://docs.google.com/document/d/1MpLD1zo3KG-64DfAuqrh27dEaTqOM8syEKtuEpV__do/edit?usp=drive_link'
+    roadmap_url: 'https://docs.google.com/document/d/135uIm8GCqc57HOZwajGuwTQX_SFD22_PKuFRKTVCzLQ/edit?usp=drivesdk'
   }
 };
 
