@@ -433,7 +433,7 @@ export default function App() {
                     />
                   </div>
 
-                  <span className="relative z-10">Find My IT Career Now</span>
+                  <span className="relative z-10">Find My Dream Career Now</span>
                   <ArrowRight className="relative z-10 w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
                 </Motion.button>
               </div>
