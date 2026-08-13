@@ -2,7 +2,10 @@ const TEMPLATE_NAME = 'findyourdomain';
 const INDIA_PREFIX = '91';
 const MAX_BODY_BYTES = 16 * 1024;
 const MAX_ANSWER_TEXT_LENGTH = 160;
+const MAX_SECOND_SOURCE_LENGTH = 80;
 const ALLOWED_SOURCES = new Set(['landing', 'career-assessment-landing', 'local-test']);
+const SALESMAX_TEMPLATE_NAME = 'salesmax_leads';
+const SALESMAX_SOURCE = 'youtube-malayalam';
 
 const ROADMAPS = {
   'Game Development': {
@@ -40,16 +43,6 @@ const responseHeaders = {
 const json = (body, status = 200) => (
   new Response(JSON.stringify(body), { status, headers: responseHeaders })
 );
-
-class SupabaseInsertError extends Error {
-  constructor(table, status, detail) {
-    super(`Supabase insert failed for ${table}: ${detail}`);
-    this.name = 'SupabaseInsertError';
-    this.table = table;
-    this.status = status;
-    this.detail = detail;
-  }
-}
 
 const normalizeEndpoint = (endpoint) => endpoint.replace(/\/+$/, '');
 
@@ -122,6 +115,7 @@ function validateLead(body) {
   const assignedPath = typeof body?.assigned_path === 'string' ? body.assigned_path.trim() : '';
   const category = typeof body?.category === 'string' ? body.category.trim().slice(0, 80) : null;
   const source = typeof body?.source === 'string' ? body.source.trim().slice(0, 80) : 'landing';
+  const secondSource = sanitizeSecondSource(body?.second_source);
   const honeypot = typeof body?.website === 'string' ? body.website.trim() : '';
   const roadmap = ROADMAPS[assignedPath];
 
@@ -156,9 +150,23 @@ function validateLead(body) {
       roadmap_url: roadmap.roadmap_url,
       category,
       answers: sanitizeAnswers(body?.answers),
-      source
+      source,
+      second_source: secondSource
     }
   };
+}
+
+function sanitizeSecondSource(value) {
+  if (typeof value !== 'string') {
+    return 'direct';
+  }
+
+  const normalized = value
+    .trim()
+    .slice(0, MAX_SECOND_SOURCE_LENGTH)
+    .replace(/[^\w .:/-]/g, '');
+
+  return normalized || 'direct';
 }
 
 function sanitizeAnswers(answers) {
@@ -200,30 +208,17 @@ async function insertSupabase(env, table, row) {
   if (!response.ok) {
     const detail = await response.text();
     debugLog(env, 'supabase insert:failed', { table, status: response.status, detail });
-    throw new SupabaseInsertError(table, response.status, detail);
+    throw new Error(`Supabase insert failed for ${table}: ${detail}`);
   }
 
   debugLog(env, 'supabase insert:ok', { table, status: response.status });
-}
-
-function isDuplicateRegistrationError(error) {
-  if (!(error instanceof SupabaseInsertError)) {
-    return false;
-  }
-
-  return error.table === 'career_assessment_leads'
-    && (
-      error.status === 409
-      || error.detail.includes('23505')
-      || error.detail.toLowerCase().includes('duplicate key')
-      || error.detail.includes('career_assessment_leads_phone_number_unique_idx')
-    );
 }
 
 function toLeadInsertRow(lead) {
   const leadInsertRow = { ...lead };
   delete leadInsertRow.roadmap_url;
   delete leadInsertRow.domain;
+  delete leadInsertRow.second_source;
   return leadInsertRow;
 }
 
@@ -366,6 +361,71 @@ async function sendWatiTemplate(env, lead) {
   };
 }
 
+async function sendSalesmaxLead(env, lead) {
+  const requestBody = {
+    update: true,
+    data: [
+      {
+        name: lead.name,
+        country_code: INDIA_PREFIX,
+        phone: lead.phone_number,
+        current_status: lead.category || 'unknown',
+        source: SALESMAX_SOURCE,
+        '2nd_Source': lead.second_source
+      }
+    ]
+  };
+  const requestLog = {
+    source: SALESMAX_SOURCE,
+    second_source: lead.second_source,
+    current_status: lead.category || 'unknown',
+    country_code: INDIA_PREFIX,
+    phone: maskPhone(`${INDIA_PREFIX}${lead.phone_number}`)
+  };
+
+  if (env.TEST_MODE === '1' || env.TEST_MODE === 'true') {
+    return {
+      ok: true,
+      status: 200,
+      requestLog: { ...requestLog, test_mode: true },
+      responseBody: { test_mode: true }
+    };
+  }
+
+  if (!env.SALESMAX_LEADS_URL) {
+    throw new Error('Missing server configuration: SALESMAX_LEADS_URL');
+  }
+
+  debugLog(env, 'salesmax send:start', requestLog);
+
+  const response = await fetch(env.SALESMAX_LEADS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody)
+  });
+  const responseText = await response.text();
+  let responseBody;
+
+  try {
+    responseBody = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    responseBody = { raw: responseText };
+  }
+
+  debugLog(env, 'salesmax send:response', {
+    ok: response.ok,
+    status: response.status,
+    responseBody: sanitizeProviderResponse(responseBody)
+  });
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    requestLog,
+    responseBody
+  };
+}
+
 async function recordDeliveryEvent(env, leadId, watiResult) {
   await insertSupabase(env, 'career_assessment_delivery_events', {
     lead_id: leadId,
@@ -376,6 +436,52 @@ async function recordDeliveryEvent(env, leadId, watiResult) {
     response: sanitizeProviderResponse(watiResult.responseBody),
     error: watiResult.ok ? null : `WATI returned HTTP ${watiResult.status}`
   });
+}
+
+async function recordCrmEvent(env, leadId, crmResult) {
+  await insertSupabase(env, 'career_assessment_delivery_events', {
+    lead_id: leadId,
+    provider: 'salesmax_crm',
+    template_name: SALESMAX_TEMPLATE_NAME,
+    status: crmResult.ok ? 'sent' : 'failed',
+    request: crmResult.requestLog,
+    response: sanitizeProviderResponse(crmResult.responseBody),
+    error: crmResult.ok ? null : `Salesmax returned HTTP ${crmResult.status}`
+  });
+}
+
+async function syncSalesmax(env, lead) {
+  try {
+    const crmResult = await sendSalesmaxLead(env, lead);
+    await recordCrmEvent(env, lead.id, crmResult);
+
+    if (!crmResult.ok) {
+      console.error('[register] salesmax failed', {
+        lead_id: lead.id,
+        status: crmResult.status,
+        response: sanitizeProviderResponse(crmResult.responseBody)
+      });
+    }
+  } catch (error) {
+    console.error('[register] salesmax failed', stringifyError(error));
+
+    try {
+      await recordCrmEvent(env, lead.id, {
+        ok: false,
+        status: 0,
+        requestLog: {
+          source: SALESMAX_SOURCE,
+          second_source: lead.second_source,
+          current_status: lead.category || 'unknown',
+          country_code: INDIA_PREFIX,
+          phone: maskPhone(`${INDIA_PREFIX}${lead.phone_number}`)
+        },
+        responseBody: {},
+      });
+    } catch (eventError) {
+      console.error('[register] salesmax event failed', stringifyError(eventError));
+    }
+  }
 }
 
 function optionsResponse() {
@@ -449,25 +555,14 @@ async function handlePost(context) {
 
     await insertSupabase(env, 'career_assessment_leads', toLeadInsertRow(lead));
   } catch (error) {
-    if (isDuplicateRegistrationError(error)) {
-      debugLog(env, 'request:duplicate', {
-        requestId,
-        phone: lead?.whatsapp_number ? maskPhone(lead.whatsapp_number) : null
-      });
-
-      return json({
-        success: false,
-        code: 'already_registered',
-        message: 'This WhatsApp number is already registered.'
-      }, 409);
-    }
-
     console.error('[register] save failed', stringifyError(error));
     return json({
       success: false,
       message: 'We could not save your roadmap request right now. Please try again.'
     }, 502);
   }
+
+  await syncSalesmax(env, lead);
 
   try {
     const watiResult = await sendWatiTemplate(env, lead);

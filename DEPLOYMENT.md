@@ -22,13 +22,6 @@ The migration enables RLS and grants `anon` insert-only access to:
 
 There is no public `SELECT`, `UPDATE`, or `DELETE` grant.
 
-The phone number unique index blocks duplicate registrations:
-
-```sql
-create unique index if not exists career_assessment_leads_phone_number_unique_idx
-  on public.career_assessment_leads (phone_number);
-```
-
 ## Cloudflare Environment Variables
 
 Set these as Cloudflare Pages variables:
@@ -47,6 +40,7 @@ Set this as an encrypted Cloudflare secret:
 
 ```env
 WATI_API_KEY=...
+SALESMAX_LEADS_URL=...
 ```
 
 Rotate the WATI key that was shared in chat, then use the rotated key in Cloudflare.

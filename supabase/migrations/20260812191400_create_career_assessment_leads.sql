@@ -26,7 +26,7 @@ create table if not exists public.career_assessment_leads (
 create index if not exists career_assessment_leads_created_at_idx
   on public.career_assessment_leads (created_at desc);
 
-create unique index if not exists career_assessment_leads_phone_number_unique_idx
+create index if not exists career_assessment_leads_phone_number_idx
   on public.career_assessment_leads (phone_number);
 
 create index if not exists career_assessment_leads_assigned_path_idx
@@ -36,7 +36,7 @@ create table if not exists public.career_assessment_delivery_events (
   id uuid primary key default gen_random_uuid(),
   lead_id uuid not null references public.career_assessment_leads (id) on delete cascade,
   created_at timestamptz not null default now(),
-  provider text not null check (provider = 'wati'),
+  provider text not null check (provider in ('wati', 'salesmax_crm')),
   template_name text not null,
   status text not null check (status in ('sent', 'failed')),
   request jsonb not null default '{}'::jsonb,
@@ -85,7 +85,7 @@ create policy "Allow anonymous delivery event inserts"
   for insert
   to anon
   with check (
-    provider = 'wati'
-    and template_name = 'findyourdomain'
+    provider in ('wati', 'salesmax_crm')
+    and template_name in ('findyourdomain', 'salesmax_leads')
     and status in ('sent', 'failed')
   );
