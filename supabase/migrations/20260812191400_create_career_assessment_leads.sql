@@ -19,6 +19,10 @@ create table if not exists public.career_assessment_leads (
   category text,
   answers jsonb not null default '{}'::jsonb,
   source text not null default 'landing',
+  second_source text not null default 'direct' check (
+    char_length(trim(second_source)) between 1 and 80
+    and second_source ~ '^[[:alnum:]_ .:/-]+$'
+  ),
   user_agent text,
   ip_hash text
 );
@@ -69,6 +73,8 @@ create policy "Allow anonymous lead inserts"
     char_length(trim(name)) between 1 and 80
     and phone_number ~ '^[0-9]{10}$'
     and whatsapp_number = '91' || phone_number
+    and char_length(trim(second_source)) between 1 and 80
+    and second_source ~ '^[[:alnum:]_ .:/-]+$'
     and assigned_path in (
       'Game Development',
       'Cyber Security',

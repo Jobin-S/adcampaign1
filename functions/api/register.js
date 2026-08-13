@@ -232,11 +232,31 @@ async function insertSupabase(env, table, row) {
   debugLog(env, 'supabase insert:ok', { table, status: response.status });
 }
 
+async function insertLead(env, lead) {
+  const leadInsertRow = toLeadInsertRow(lead);
+
+  try {
+    await insertSupabase(env, 'career_assessment_leads', leadInsertRow);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (!message.includes('second_source')) {
+      throw error;
+    }
+
+    const fallbackRow = { ...leadInsertRow };
+    delete fallbackRow.second_source;
+    console.error('[register] second_source column missing; run the latest Supabase migration', {
+      lead_id: lead.id
+    });
+    await insertSupabase(env, 'career_assessment_leads', fallbackRow);
+  }
+}
+
 function toLeadInsertRow(lead) {
   const leadInsertRow = { ...lead };
   delete leadInsertRow.roadmap_url;
   delete leadInsertRow.domain;
-  delete leadInsertRow.second_source;
   return leadInsertRow;
 }
 
@@ -592,7 +612,7 @@ async function handlePost(context) {
     lead.user_agent = request.headers.get('User-Agent') || null;
     lead.ip_hash = await sha256Hex(request.headers.get('CF-Connecting-IP') || '');
 
-    await insertSupabase(env, 'career_assessment_leads', toLeadInsertRow(lead));
+    await insertLead(env, lead);
   } catch (error) {
     console.error('[register] save failed', stringifyError(error));
     return json({
