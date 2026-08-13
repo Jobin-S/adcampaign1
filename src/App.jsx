@@ -119,7 +119,7 @@ const heroCopy = {
 const resultProfiles = {
   'Web Development': {
     label: 'Web Developer',
-    image: './web_dev_kerala.png',
+    image: 'https://findmycareer.pages.dev/web_dev_kerala.png',
     accent: 'from-blue-600 to-sky-500',
     badge: 'Creative builder',
     summary: 'You seem drawn to visual work, interactive ideas, and creating things people can use on the web.',
@@ -129,7 +129,7 @@ const resultProfiles = {
   },
   'Mobile Development': {
     label: 'Mobile Developer',
-    image: './mobile_dev_kerala.png',
+    image: 'https://findmycareer.pages.dev/mobile_dev_kerala.png',
     accent: 'from-green-500 to-teal-500',
     badge: 'App-minded problem solver',
     summary: 'You seem interested in everyday apps, smooth user experiences, and products people carry with them.',
@@ -139,7 +139,7 @@ const resultProfiles = {
   },
   'Artificial Intelligence & ML': {
     label: 'AI Specialist',
-    image: './ai_specialist_happy_kerala.png',
+    image: 'https://findmycareer.pages.dev/ai_specialist_happy_kerala.png',
     accent: 'from-violet-600 to-indigo-500',
     badge: 'Automation thinker',
     summary: 'You seem excited by smart tools, shortcuts, prediction, and systems that can learn from patterns.',
@@ -149,7 +149,7 @@ const resultProfiles = {
   },
   'Data Science': {
     label: 'Data Scientist',
-    image: './data_science_happy_kerala.png',
+    image: 'https://findmycareer.pages.dev/data_science_happy_kerala.png',
     accent: 'from-cyan-600 to-blue-500',
     badge: 'Pattern finder',
     summary: 'You seem comfortable with facts, numbers, organization, and turning messy information into decisions.',
@@ -159,7 +159,7 @@ const resultProfiles = {
   },
   'Cyber Security': {
     label: 'Cyber Security Specialist',
-    image: './security_kerala.png',
+    image: 'https://findmycareer.pages.dev/security_kerala.png',
     accent: 'from-red-600 to-orange-500',
     badge: 'Digital protector',
     summary: 'You seem naturally alert to safety, privacy, mistakes, and how systems can be protected.',
@@ -169,7 +169,7 @@ const resultProfiles = {
   },
   'Game Development': {
     label: 'Game Developer',
-    image: './game_dev_kerala.png',
+    image: 'https://findmycareer.pages.dev/game_dev_kerala.png',
     accent: 'from-orange-500 to-yellow-500',
     badge: 'Experience creator',
     summary: 'You seem motivated by play, imagination, and creating interactive worlds that people enjoy.',
@@ -180,10 +180,8 @@ const resultProfiles = {
 };
 
 const getRegisterEndpoint = () => {
-  const pathname = window.location.pathname;
-
-  if (pathname === '/findmycareer' || pathname.startsWith('/findmycareer/')) {
-    return '/findmycareer/api/register';
+  if (window.location.hostname === 'brototype.com' || window.location.hostname === 'www.brototype.com') {
+    return 'https://findmycareer.pages.dev/api/register';
   }
 
   return '/api/register';
@@ -384,7 +382,7 @@ export default function App() {
       <nav className={`w-full fixed top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-sm border-b border-slate-100' : 'bg-transparent border-b border-transparent'}`}>
         <div className="w-full px-4 md:px-8 lg:px-12 py-3 md:py-4 flex justify-between items-center">
           <div className="flex items-center cursor-pointer" onClick={() => window.location.reload()}>
-            <img src="./logo.png" alt="Brototype" className="h-10 md:h-12 w-auto" />
+            <img src="https://findmycareer.pages.dev/logo.png" alt="Brototype" className="h-10 md:h-12 w-auto" />
           </div>
           {step === 'hero' && (
             <button
@@ -728,7 +726,7 @@ export default function App() {
 
           {/* Left: Logo */}
           <div className="flex-1 flex justify-center md:justify-start">
-            <img src="./logo.png" alt="Brototype" className="h-10 md:h-12 w-auto grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" />
+            <img src="https://findmycareer.pages.dev/logo.png" alt="Brototype" className="h-10 md:h-12 w-auto grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" />
           </div>
 
           {/* Center: Links & Contact */}

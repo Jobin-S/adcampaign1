@@ -44,6 +44,24 @@ const json = (body, status = 200) => (
   new Response(JSON.stringify(body), { status, headers: responseHeaders })
 );
 
+function withCors(response, env, request) {
+  const origin = request.headers.get('Origin') || '';
+
+  if (!origin || !isOriginAllowed(env, origin)) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set('Access-Control-Allow-Origin', origin);
+  headers.set('Vary', 'Origin');
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 const normalizeEndpoint = (endpoint) => endpoint.replace(/\/+$/, '');
 
 function getWatiV3Base(endpoint) {
@@ -227,10 +245,23 @@ function validateOrigin(env, request) {
     return true;
   }
 
+  const origin = request.headers.get('Origin') || '';
+
+  if (!origin) {
+    return true;
+  }
+
+  return isOriginAllowed(env, origin);
+}
+
+function isOriginAllowed(env, origin) {
+  if (!env.ALLOWED_ORIGINS) {
+    return true;
+  }
+
   const allowedOrigins = env.ALLOWED_ORIGINS.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const origin = request.headers.get('Origin') || '';
 
   return allowedOrigins.some((allowedOrigin) => {
     if (allowedOrigin.includes('*')) {
@@ -484,14 +515,22 @@ async function syncSalesmax(env, lead) {
   }
 }
 
-function optionsResponse() {
+function optionsResponse(env, request) {
+  const headers = new Headers({
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Cache-Control': 'no-store'
+  });
+  const origin = request.headers.get('Origin') || '';
+
+  if (origin && isOriginAllowed(env, origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+    headers.set('Vary', 'Origin');
+  }
+
   return new Response(null, {
     status: 204,
-    headers: {
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Cache-Control': 'no-store'
-    }
+    headers
   });
 }
 
@@ -596,12 +635,12 @@ async function handlePost(context) {
 
 export async function onRequest(context) {
   if (context.request.method === 'OPTIONS') {
-    return optionsResponse();
+    return optionsResponse(context.env, context.request);
   }
 
   if (context.request.method === 'POST') {
-    return handlePost(context);
+    return withCors(await handlePost(context), context.env, context.request);
   }
 
-  return json({ success: false, message: 'Method not allowed.' }, 405);
+  return withCors(json({ success: false, message: 'Method not allowed.' }, 405), context.env, context.request);
 }
